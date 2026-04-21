@@ -6,14 +6,9 @@ Upload files and get temporary shareable links.
 import ctypes
 import os
 import sys
-import threading
 import tkinter as tk
 from tkinter import filedialog, ttk
 from tkinterdnd2 import TkinterDnD, DND_FILES
-import urllib.request
-import urllib.error
-import json
-import mimetypes
 
 
 # ── Constants ──────────────────────────────────────────────────────────────────
@@ -62,6 +57,7 @@ class MultipartFormData:
         self.parts = []
 
     def add_file(self, field_name, filepath):
+        import mimetypes
         filename = os.path.basename(filepath)
         mime_type = mimetypes.guess_type(filepath)[0] or "application/octet-stream"
         with open(filepath, "rb") as f:
@@ -442,12 +438,17 @@ class UguuDesktop:
         self.progress_label.configure(text="0%")
         self.progress_frame.pack(fill="x", pady=(0, 4))
 
+        import threading
         thread = threading.Thread(target=self._upload_files, args=(pending,),
                                   daemon=True)
         thread.start()
 
     def _upload_files(self, pending):
         """Upload files one by one (each as a separate request for reliability)."""
+        import urllib.request
+        import urllib.error
+        import json
+
         done_count = 0
         error_count = 0
 

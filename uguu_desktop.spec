@@ -5,6 +5,34 @@ import tkinterdnd2
 # Bundle the tkdnd native library alongside the exe
 tkdnd_path = os.path.dirname(tkinterdnd2.__file__)
 
+# Modules we never use — excluding them shrinks the bundle
+# and speeds up extraction (= faster startup)
+EXCLUDES = [
+    # Testing
+    'unittest', 'pytest', 'doctest', 'test',
+    # Dev tools
+    'pdb', 'pydoc', 'profile', 'cProfile', 'trace',
+    # Unused stdlib
+    'xml', 'xmlrpc', 'html.parser', 'plistlib',
+    'sqlite3', 'decimal', 'fractions', 'statistics',
+    'csv', 'configparser', 'tomllib',
+    'logging', 'gettext', 'argparse', 'optparse',
+    'multiprocessing', 'concurrent', 'asyncio',
+    'socketserver', 'ftplib', 'smtplib', 'imaplib',
+    'poplib', 'nntplib', 'telnetlib',
+    'turtle', 'turtledemo', 'tkinter.tix',
+    'distutils', 'setuptools', 'pkg_resources', 'pip',
+    'lib2to3', 'ensurepip', 'venv', 'idlelib',
+    'curses', 'readline',
+    'mailbox', 'mailcap', 'calendar', 'pprint',
+    'pickletools', 'py_compile', 'compileall',
+    'zipapp', 'zipimport',
+    # Crypto/hash we don't need
+    'hmac', 'secrets',
+    # Pillow (not needed at runtime)
+    'PIL', 'Pillow',
+]
+
 a = Analysis(
     ['uguu_desktop.py'],
     pathex=[],
@@ -17,7 +45,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=EXCLUDES,
     noarchive=False,
 )
 pyz = PYZ(a.pure)
