@@ -1,11 +1,19 @@
 # -*- mode: python ; coding: utf-8 -*-
+import os
+import tkinterdnd2
+
+# Bundle the tkdnd native library alongside the exe
+tkdnd_path = os.path.dirname(tkinterdnd2.__file__)
 
 a = Analysis(
     ['uguu_desktop.py'],
     pathex=[],
     binaries=[],
-    datas=[('imgs/favicon.ico', 'imgs')],
-    hiddenimports=[],
+    datas=[
+        ('imgs/favicon.ico', 'imgs'),
+        (tkdnd_path, 'tkinterdnd2'),
+    ],
+    hiddenimports=['tkinterdnd2'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

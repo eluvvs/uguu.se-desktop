@@ -9,6 +9,7 @@ import sys
 import threading
 import tkinter as tk
 from tkinter import filedialog, ttk
+from tkinterdnd2 import TkinterDnD, DND_FILES
 import urllib.request
 import urllib.error
 import json
@@ -34,6 +35,7 @@ TEXT_DIM = "#707070"
 TEXT_SUCCESS = "#6ddb8a"
 TEXT_ERROR = "#ff6b81"
 BORDER = "#1e1e1e"
+DROP_HIGHLIGHT = "#0d1a2e"
 
 
 def resource_path(relative_path):
@@ -159,14 +161,14 @@ class UguuDesktop:
         info_label.pack(anchor="w", pady=(0, 10))
 
         # ── File list area ─────────────────────────────────────────────────
-        list_frame = tk.Frame(main, bg=BG_CARD, highlightbackground=BORDER,
-                              highlightthickness=1)
-        list_frame.pack(fill="both", expand=True, pady=(0, 10))
+        self.list_frame = tk.Frame(main, bg=BG_CARD, highlightbackground=BORDER,
+                                   highlightthickness=2)
+        self.list_frame.pack(fill="both", expand=True, pady=(0, 10))
 
         # Scrollable file list
-        self.canvas = tk.Canvas(list_frame, bg=BG_CARD, highlightthickness=0,
+        self.canvas = tk.Canvas(self.list_frame, bg=BG_CARD, highlightthickness=0,
                                 borderwidth=0)
-        scrollbar = ttk.Scrollbar(list_frame, orient="vertical",
+        scrollbar = ttk.Scrollbar(self.list_frame, orient="vertical",
                                   command=self.canvas.yview)
 
         self.file_list_frame = tk.Frame(self.canvas, bg=BG_CARD)
@@ -181,10 +183,17 @@ class UguuDesktop:
         self.canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
+        # Drop overlay (shown on drag hover)
+        self.drop_overlay = tk.Label(
+            self.list_frame, text="drop here~",
+            font=("Segoe UI", 18), fg=ACCENT, bg=DROP_HIGHLIGHT,
+            justify="center", cursor="hand2"
+        )
+
         # Placeholder text
         self.placeholder = tk.Label(
             self.file_list_frame,
-            text="No files selected\nClick 'Add Files' to get started",
+            text="No files selected\nDrag files here or click 'Add Files'",
             font=("Segoe UI", 11), fg=TEXT_DIM, bg=BG_CARD,
             justify="center"
         )
@@ -192,6 +201,12 @@ class UguuDesktop:
 
         # Bind mousewheel
         self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+
+        # ── Drag and drop ──────────────────────────────────────────────────
+        self.root.drop_target_register(DND_FILES)
+        self.root.dnd_bind('<<DropEnter>>', self._on_drag_enter)
+        self.root.dnd_bind('<<DropLeave>>', self._on_drag_leave)
+        self.root.dnd_bind('<<Drop>>', self._on_drop)
 
         # ── Buttons ────────────────────────────────────────────────────────
         btn_frame = tk.Frame(main, bg=BG)
@@ -256,6 +271,27 @@ class UguuDesktop:
         self.progress_var.set(pct)
         self.progress_label.configure(text=f"{int(pct)}%")
 
+    def _on_drag_enter(self, event):
+        """Visual feedback when dragging files over the window."""
+        if self.uploading:
+            return
+        self.drop_overlay.place(relx=0, rely=0, relwidth=1, relheight=1)
+        self.list_frame.configure(highlightbackground=ACCENT)
+
+    def _on_drag_leave(self, event):
+        """Restore visuals when drag leaves."""
+        self.drop_overlay.place_forget()
+        self.list_frame.configure(highlightbackground=BORDER)
+
+    def _on_drop(self, event):
+        """Handle dropped files."""
+        self.drop_overlay.place_forget()
+        self.list_frame.configure(highlightbackground=BORDER)
+        if self.uploading:
+            return
+        paths = self.root.tk.splitlist(event.data)
+        self._add_paths([p for p in paths if os.path.isfile(p)])
+
     def _add_files(self):
         if self.uploading:
             return
@@ -263,18 +299,22 @@ class UguuDesktop:
             title="Select files to upload",
             filetypes=[("All files", "*.*")]
         )
-        if not paths:
-            return
+        if paths:
+            self._add_paths(paths)
 
+    def _add_paths(self, paths):
+        """Add file paths to the upload queue."""
         for path in paths:
             if path in [f["path"] for f in self.files]:
+                continue
+            if not os.path.isfile(path):
                 continue
             size = os.path.getsize(path)
             self.files.append({
                 "path": path,
                 "name": os.path.basename(path),
                 "size": size,
-                "status": "pending",  # pending, uploading, done, error
+                "status": "pending",
                 "url": None,
                 "error": None,
             })
@@ -513,7 +553,7 @@ def main():
     except Exception:
         pass
 
-    root = tk.Tk()
+    root = TkinterDnD.Tk()
 
     # Apply a dark ttk theme for scrollbar
     style = ttk.Style()
