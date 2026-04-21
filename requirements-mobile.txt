@@ -1,3 +1,4 @@
 # Mobile-specific requirements
+flet
 certifi
 
