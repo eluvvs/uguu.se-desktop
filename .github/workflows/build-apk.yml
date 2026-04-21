@@ -33,7 +33,10 @@ jobs:
         run: pip install flet
 
       - name: Build APK
-        run: flet build apk -r requirements-mobile.txt
+        run: |
+          mv requirements.txt requirements-desktop.txt
+          mv requirements-mobile.txt requirements.txt
+          flet build apk
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
