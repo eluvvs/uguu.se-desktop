@@ -91,11 +91,6 @@ def main(page: ft.Page):
     page.bgcolor = BG
     page.theme_mode = ft.ThemeMode.DARK
     page.padding = 20
-    page.window.width = 520
-    page.window.height = 700
-
-    # Configure animations for the page
-    page.animation = ft.animation.Animation(300, ft.AnimationCurve.DECELERATE)
     
     # State
     files_state = []
@@ -148,7 +143,7 @@ def main(page: ft.Page):
         border=ft.border.all(2, BORDER),
         padding=10,
         expand=True,
-        animate=ft.animation.Animation(300, "decelerate")
+        animate=ft.Animation(300, "decelerate")
     )
 
     status_text = ft.Text("Ready", size=12, color=TEXT_DIM)
@@ -214,7 +209,7 @@ def main(page: ft.Page):
                     bgcolor=BG_SECONDARY if i % 2 == 0 else BG_CARD,
                     border_radius=8,
                     padding=10,
-                    animate=ft.animation.Animation(400, "bounceOut"),
+                    animate=ft.Animation(400, "bounceOut"),
                     offset=ft.transform.Offset(0, 0),
                     opacity=1
                 )
