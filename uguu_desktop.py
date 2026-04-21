@@ -3,6 +3,7 @@ Uguu Desktop — Lightweight file uploader for uguu.se
 Upload files and get temporary shareable links.
 """
 
+import ctypes
 import os
 import sys
 import threading
@@ -22,17 +23,17 @@ WINDOW_WIDTH = 520
 WINDOW_HEIGHT = 480
 
 
-# ── Colors ─────────────────────────────────────────────────────────────────────
-BG = "#1e1e2e"
-BG_SECONDARY = "#282840"
-BG_CARD = "#313152"
-ACCENT = "#89b4fa"
-ACCENT_HOVER = "#74c7ec"
-TEXT = "#cdd6f4"
-TEXT_DIM = "#6c7086"
-TEXT_SUCCESS = "#a6e3a1"
-TEXT_ERROR = "#f38ba8"
-BORDER = "#45475a"
+# ── Colors (OLED Dark) ─────────────────────────────────────────────────────────
+BG = "#000000"
+BG_SECONDARY = "#0a0a0a"
+BG_CARD = "#111111"
+ACCENT = "#5eaaff"
+ACCENT_HOVER = "#7ec4ff"
+TEXT = "#e8e8e8"
+TEXT_DIM = "#707070"
+TEXT_SUCCESS = "#6ddb8a"
+TEXT_ERROR = "#ff6b81"
+BORDER = "#1e1e1e"
 
 
 def resource_path(relative_path):
@@ -85,6 +86,28 @@ class MultipartFormData:
         return f"multipart/form-data; boundary={self.boundary}"
 
 
+class ProgressReader:
+    """Wraps bytes so urllib sends data in chunks, enabling progress tracking."""
+
+    def __init__(self, data, callback=None):
+        self.data = data
+        self.pos = 0
+        self.total = len(data)
+        self.callback = callback
+
+    def read(self, size=8192):
+        if self.pos >= self.total:
+            return b""
+        chunk = self.data[self.pos:self.pos + size]
+        self.pos += len(chunk)
+        if self.callback:
+            self.callback(self.pos, self.total)
+        return chunk
+
+    def __len__(self):
+        return self.total
+
+
 class UguuDesktop:
     def __init__(self, root):
         self.root = root
@@ -94,11 +117,11 @@ class UguuDesktop:
         self.root.configure(bg=BG)
         self.root.resizable(True, True)
 
-        # Try to set icon
-        icon_path = resource_path("icon.ico")
+        # Set window icon (title bar + taskbar)
+        icon_path = resource_path(os.path.join("imgs", "favicon.ico"))
         if os.path.exists(icon_path):
             try:
-                self.root.iconbitmap(icon_path)
+                self.root.iconbitmap(default=icon_path)
             except tk.TclError:
                 pass
 
@@ -198,6 +221,24 @@ class UguuDesktop:
         )
         self.upload_btn.pack(side="right")
 
+        # ── Progress bar ──────────────────────────────────────────────────
+        self.progress_frame = tk.Frame(main, bg=BG)
+        # Hidden initially — shown only during upload
+
+        self.progress_var = tk.DoubleVar(value=0)
+        self.progress_bar = ttk.Progressbar(
+            self.progress_frame, variable=self.progress_var,
+            maximum=100, mode="determinate",
+            style="Upload.Horizontal.TProgressbar"
+        )
+        self.progress_bar.pack(side="left", fill="x", expand=True, pady=(0, 2))
+
+        self.progress_label = tk.Label(
+            self.progress_frame, text="0%", font=("Segoe UI", 9, "bold"),
+            fg=ACCENT, bg=BG, width=5, anchor="e"
+        )
+        self.progress_label.pack(side="right", padx=(8, 0), pady=(0, 2))
+
         # ── Status bar ─────────────────────────────────────────────────────
         self.status_var = tk.StringVar(value="Ready")
         status_bar = tk.Label(
@@ -208,6 +249,12 @@ class UguuDesktop:
 
     def _on_mousewheel(self, event):
         self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+    def _update_progress(self, pct):
+        """Update the progress bar and percentage label."""
+        pct = min(100, max(0, pct))
+        self.progress_var.set(pct)
+        self.progress_label.configure(text=f"{int(pct)}%")
 
     def _add_files(self):
         if self.uploading:
@@ -350,6 +397,11 @@ class UguuDesktop:
         self.clear_btn.configure(state="disabled")
         self.status_var.set(f"Uploading {len(pending)} file(s)...")
 
+        # Show progress bar
+        self.progress_var.set(0)
+        self.progress_label.configure(text="0%")
+        self.progress_frame.pack(fill="x", pady=(0, 4))
+
         thread = threading.Thread(target=self._upload_files, args=(pending,),
                                   daemon=True)
         thread.start()
@@ -371,11 +423,23 @@ class UguuDesktop:
                 form.add_file("files[]", f["path"])
                 body = form.encode()
 
+                file_idx = pending.index(f)
+                total_files = len(pending)
+
+                def on_progress(sent, total):
+                    # Per-file progress scaled into the overall progress
+                    file_pct = (sent / total) * 100 if total else 100
+                    overall_pct = ((file_idx + sent / total) / total_files) * 100 if total else 0
+                    self.root.after(0, self._update_progress, overall_pct)
+
+                reader = ProgressReader(body, callback=on_progress)
+
                 req = urllib.request.Request(
                     UPLOAD_URL,
-                    data=body,
+                    data=reader,
                     headers={
                         "Content-Type": form.content_type,
+                        "Content-Length": str(len(body)),
                         "User-Agent": "UguuDesktop/1.0",
                     },
                     method="POST",
@@ -385,17 +449,21 @@ class UguuDesktop:
                     response_data = resp.read().decode("utf-8")
                     result = json.loads(response_data)
 
-                # Response is a list of objects with "url" key
-                if isinstance(result, list) and len(result) > 0:
-                    url = result[0].get("url", "")
-                    if url:
-                        f["url"] = url
+                # Response: {"success": true, "files": [{"url": "...", ...}]}
+                if isinstance(result, dict) and result.get("success"):
+                    files_list = result.get("files", [])
+                    if files_list and files_list[0].get("url"):
+                        f["url"] = files_list[0]["url"]
                         f["status"] = "done"
                         done_count += 1
                     else:
                         f["status"] = "error"
                         f["error"] = "No URL in response"
                         error_count += 1
+                elif isinstance(result, dict) and not result.get("success"):
+                    f["status"] = "error"
+                    f["error"] = result.get("description", "Upload rejected")
+                    error_count += 1
                 else:
                     f["status"] = "error"
                     f["error"] = "Unexpected response format"
@@ -427,6 +495,8 @@ class UguuDesktop:
             self.upload_btn.configure(state="normal", bg=ACCENT)
             self.add_btn.configure(state="normal")
             self.clear_btn.configure(state="normal")
+            self._update_progress(100)
+            self.root.after(500, self.progress_frame.pack_forget)
             self.status_var.set(status_msg)
             self._refresh_file_list()
 
@@ -434,6 +504,15 @@ class UguuDesktop:
 
 
 def main():
+    # Tell Windows this is its own app so the taskbar shows our icon,
+    # not the generic Python icon.
+    try:
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+            "uguu.desktop.uploader.1"
+        )
+    except Exception:
+        pass
+
     root = tk.Tk()
 
     # Apply a dark ttk theme for scrollbar
@@ -444,6 +523,11 @@ def main():
                      troughcolor=BG_CARD,
                      arrowcolor=TEXT_DIM,
                      borderwidth=0)
+    style.configure("Upload.Horizontal.TProgressbar",
+                     background=ACCENT,
+                     troughcolor=BG_CARD,
+                     borderwidth=0,
+                     thickness=8)
 
     app = UguuDesktop(root)
     root.mainloop()

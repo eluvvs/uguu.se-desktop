@@ -1,14 +1,10 @@
 # -*- mode: python ; coding: utf-8 -*-
-import os
-
-icon_file = 'icon.ico' if os.path.exists('icon.ico') else None
-datas = [('icon.ico', '.')] if os.path.exists('icon.ico') else []
 
 a = Analysis(
     ['uguu_desktop.py'],
     pathex=[],
     binaries=[],
-    datas=datas,
+    datas=[('imgs/favicon.ico', 'imgs')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -31,11 +27,11 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,          # No console window — GUI only
+    console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=icon_file,
+    icon='imgs/favicon.ico',
 )
