@@ -4,6 +4,7 @@ Upload files and get temporary shareable links.
 """
 
 import ctypes
+import io
 import os
 import sys
 import tkinter as tk
@@ -84,26 +85,39 @@ class MultipartFormData:
         return f"multipart/form-data; boundary={self.boundary}"
 
 
-class ProgressReader:
-    """Wraps bytes so urllib sends data in chunks, enabling progress tracking."""
+class ProgressReader(io.IOBase):
+    """Wraps bytes as a file-like object so urllib sends data in chunks,
+    enabling progress tracking.  Inherits from io.IOBase so that
+    http.client recognises it as a proper file-like on every Python
+    version (3.8-3.13+)."""
 
     def __init__(self, data, callback=None):
-        self.data = data
-        self.pos = 0
+        self._stream = io.BytesIO(data)
         self.total = len(data)
         self.callback = callback
 
-    def read(self, size=8192):
-        if self.pos >= self.total:
-            return b""
-        chunk = self.data[self.pos:self.pos + size]
-        self.pos += len(chunk)
-        if self.callback:
-            self.callback(self.pos, self.total)
+    # http.client looks for read(), then __len__, then fileno().
+    def read(self, size=-1):
+        chunk = self._stream.read(size)
+        if self.callback and chunk:
+            self.callback(self._stream.tell(), self.total)
         return chunk
 
     def __len__(self):
         return self.total
+
+    # Some urllib internals also check for readinto / seekable
+    def readinto(self, b):
+        data = self.read(len(b))
+        n = len(data)
+        b[:n] = data
+        return n
+
+    def seekable(self):
+        return False
+
+    def readable(self):
+        return True
 
 
 class UguuDesktop:
@@ -448,88 +462,119 @@ class UguuDesktop:
         import urllib.request
         import urllib.error
         import json
+        import traceback
 
         done_count = 0
         error_count = 0
 
-        for f in pending:
-            f["status"] = "uploading"
-            self.root.after(0, self._refresh_file_list)
+        try:
+            for f in pending:
+                f["status"] = "uploading"
+                self.root.after(0, self._refresh_file_list)
 
-            try:
-                if f["size"] > MAX_FILE_SIZE:
-                    raise ValueError("File exceeds 128 MiB limit")
+                try:
+                    if f["size"] > MAX_FILE_SIZE:
+                        raise ValueError("File exceeds 128 MiB limit")
 
-                form = MultipartFormData()
-                form.add_file("files[]", f["path"])
-                body = form.encode()
+                    form = MultipartFormData()
+                    form.add_file("files[]", f["path"])
+                    body = form.encode()
 
-                file_idx = pending.index(f)
-                total_files = len(pending)
+                    file_idx = pending.index(f)
+                    total_files = len(pending)
 
-                def on_progress(sent, total):
-                    # Per-file progress scaled into the overall progress
-                    file_pct = (sent / total) * 100 if total else 100
-                    overall_pct = ((file_idx + sent / total) / total_files) * 100 if total else 0
-                    self.root.after(0, self._update_progress, overall_pct)
+                    def on_progress(sent, total, _fi=file_idx, _tf=total_files):
+                        # Per-file progress scaled into the overall progress
+                        overall_pct = ((_fi + sent / total) / _tf) * 100 if total else 0
+                        self.root.after(0, self._update_progress, overall_pct)
 
-                reader = ProgressReader(body, callback=on_progress)
+                    reader = ProgressReader(body, callback=on_progress)
 
-                req = urllib.request.Request(
-                    UPLOAD_URL,
-                    data=reader,
-                    headers={
-                        "Content-Type": form.content_type,
-                        "Content-Length": str(len(body)),
-                        "User-Agent": "UguuDesktop/1.0",
-                    },
-                    method="POST",
-                )
+                    req = urllib.request.Request(
+                        UPLOAD_URL,
+                        data=reader,
+                        headers={
+                            "Content-Type": form.content_type,
+                            "Content-Length": str(len(body)),
+                            "User-Agent": "UguuDesktop/1.0",
+                        },
+                        method="POST",
+                    )
 
-                with urllib.request.urlopen(req, timeout=120) as resp:
-                    response_data = resp.read().decode("utf-8")
-                    result = json.loads(response_data)
+                    with urllib.request.urlopen(req, timeout=120) as resp:
+                        response_data = resp.read().decode("utf-8")
 
-                # Response: {"success": true, "files": [{"url": "...", ...}]}
-                if isinstance(result, dict) and result.get("success"):
-                    files_list = result.get("files", [])
-                    if files_list and files_list[0].get("url"):
-                        f["url"] = files_list[0]["url"]
-                        f["status"] = "done"
-                        done_count += 1
+                    # Try JSON first, fall back to treating raw text as a URL
+                    try:
+                        result = json.loads(response_data)
+                    except json.JSONDecodeError:
+                        # Some uguu instances return a plain URL
+                        url_candidate = response_data.strip()
+                        if url_candidate.startswith("http"):
+                            f["url"] = url_candidate
+                            f["status"] = "done"
+                            done_count += 1
+                            self.root.after(0, self._refresh_file_list)
+                            continue
+                        else:
+                            f["status"] = "error"
+                            f["error"] = f"Bad response: {url_candidate[:60]}"
+                            error_count += 1
+                            self.root.after(0, self._refresh_file_list)
+                            continue
+
+                    # Response: {"success": true, "files": [{"url": "...", ...}]}
+                    if isinstance(result, dict) and result.get("success"):
+                        files_list = result.get("files", [])
+                        if files_list and files_list[0].get("url"):
+                            f["url"] = files_list[0]["url"]
+                            f["status"] = "done"
+                            done_count += 1
+                        else:
+                            f["status"] = "error"
+                            f["error"] = "No URL in response"
+                            error_count += 1
+                    elif isinstance(result, dict) and not result.get("success"):
+                        f["status"] = "error"
+                        f["error"] = result.get("description", "Upload rejected")
+                        error_count += 1
                     else:
                         f["status"] = "error"
-                        f["error"] = "No URL in response"
+                        f["error"] = "Unexpected response format"
                         error_count += 1
-                elif isinstance(result, dict) and not result.get("success"):
+
+                except urllib.error.HTTPError as e:
                     f["status"] = "error"
-                    f["error"] = result.get("description", "Upload rejected")
+                    try:
+                        err_body = e.read().decode("utf-8", errors="replace")[:120]
+                    except Exception:
+                        err_body = ""
+                    f["error"] = f"HTTP {e.code}: {e.reason}" + (f" — {err_body}" if err_body else "")
                     error_count += 1
-                else:
+                except urllib.error.URLError as e:
                     f["status"] = "error"
-                    f["error"] = "Unexpected response format"
+                    f["error"] = f"Connection error: {e.reason}"
+                    error_count += 1
+                except Exception as e:
+                    f["status"] = "error"
+                    f["error"] = str(e) or type(e).__name__
                     error_count += 1
 
-            except urllib.error.HTTPError as e:
-                f["status"] = "error"
-                f["error"] = f"HTTP {e.code}: {e.reason}"
-                error_count += 1
-            except urllib.error.URLError as e:
-                f["status"] = "error"
-                f["error"] = f"Connection error: {e.reason}"
-                error_count += 1
-            except Exception as e:
-                f["status"] = "error"
-                f["error"] = str(e)
-                error_count += 1
+                self.root.after(0, self._refresh_file_list)
 
-            self.root.after(0, self._refresh_file_list)
+        except Exception as e:
+            # Catch-all: if something completely unexpected blows up the
+            # entire upload loop, make sure the UI doesn't stay stuck.
+            err_str = "".join(traceback.format_exception(None, e, e.__traceback__))
+            self.root.after(0, lambda: self.status_var.set(
+                f"Fatal upload error: {type(e).__name__}"))
 
         # Done
         status_msg = f"Done! {done_count} uploaded"
         if error_count:
             status_msg += f", {error_count} failed"
-        status_msg += "  ·  Click a link to copy"
+        if done_count:
+            status_msg += "  ·  Click a link to copy"
 
         def _finish():
             self.uploading = False
