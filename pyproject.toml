@@ -9,14 +9,5 @@ dependencies = [
 [tool.flet]
 app.module = "main"
 
-[tool.flet.flutter]
-# Force the inclusion of the file_picker Flutter plugin
-dependencies = ["file_picker"]
-
 [tool.flet.android]
-org = "se.uguu"
-product = "Uguu Mobile"
 permissions = ["READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"]
-
-[tool.setuptools]
-py-modules = ["main"]
