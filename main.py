@@ -138,7 +138,7 @@ def main(page: ft.Page):
 
     # Header
     header = ft.Column([
-        ft.Text("Catbox", size=48, weight=ft.FontWeight.BOLD, color=TEXT, font_family="Cursive"),
+        ft.Image(src="logo.png", width=200),
         ft.Text("Temporary uploads up to 1 GB are allowed.", size=16, color=TEXT_DIM)
     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER)
 
@@ -474,4 +474,4 @@ def safe_main(page: ft.Page):
         page.update()
 
 if __name__ == "__main__":
-    ft.app(target=safe_main)
+    ft.app(target=safe_main, assets_dir="assets")
