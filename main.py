@@ -226,16 +226,24 @@ def main(page: ft.Page):
             status_text.value = "Ready"
             page.update()
 
-    def add_files(e):
+    import asyncio
+    async def add_files(e):
         if not is_uploading:
-            # Remove any existing FilePicker from overlay
-            page.overlay = [c for c in page.overlay if not isinstance(c, ft.FilePicker)]
+            # Re-use or create the picker dynamically
+            # We look for it in the overlay first to avoid duplicates
+            file_picker = None
+            for control in page.overlay:
+                if isinstance(control, ft.FilePicker):
+                    file_picker = control
+                    break
             
-            # Instantiate dynamically when needed
-            file_picker = ft.FilePicker()
-            file_picker.on_result = on_file_picker_result
-            page.overlay.append(file_picker)
-            page.update()
+            if not file_picker:
+                file_picker = ft.FilePicker()
+                file_picker.on_result = on_file_picker_result
+                page.overlay.append(file_picker)
+                page.update()
+                # Crucial: Give the Android/Flutter engine time to register the control
+                await asyncio.sleep(0.2)
             
             file_picker.pick_files(allow_multiple=True)
 
