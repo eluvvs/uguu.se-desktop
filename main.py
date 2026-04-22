@@ -113,9 +113,7 @@ def main(page: ft.Page):
                     })
             refresh_file_list()
 
-    file_picker = ft.FilePicker()
-    file_picker.on_result = on_file_picker_result
-    page.overlay.append(file_picker)
+
 
     # Header
     header = ft.Row([
@@ -230,6 +228,15 @@ def main(page: ft.Page):
 
     def add_files(e):
         if not is_uploading:
+            # Remove any existing FilePicker from overlay
+            page.overlay = [c for c in page.overlay if not isinstance(c, ft.FilePicker)]
+            
+            # Instantiate dynamically when needed
+            file_picker = ft.FilePicker()
+            file_picker.on_result = on_file_picker_result
+            page.overlay.append(file_picker)
+            page.update()
+            
             file_picker.pick_files(allow_multiple=True)
 
     def start_upload(e):
