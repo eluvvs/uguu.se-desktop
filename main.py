@@ -150,7 +150,7 @@ def main(page: ft.Page):
             bgcolor=ACCENT_LIGHT if val == "72h" else ACCENT,
             padding=ft.padding.symmetric(12, 8),
             border_radius=8,
-            alignment=ft.alignment.center,
+            alignment=ft.Alignment(0, 0),
             width=60,
             animate=200
         )
@@ -437,7 +437,7 @@ def main(page: ft.Page):
         bgcolor=ACCENT,
         padding=30,
         border_radius=12,
-        alignment=ft.alignment.center,
+        alignment=ft.Alignment(0, 0),
         on_click=add_files,
         width=500,
     )
