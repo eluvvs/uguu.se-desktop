@@ -119,6 +119,10 @@ def main(page: ft.Page):
     # UI Components references
     files_column = ft.Column(spacing=10, scroll=ft.ScrollMode.HIDDEN)
     
+    # File Picker
+    file_picker = ft.FilePicker(on_result=on_file_picker_result)
+    page.overlay.append(file_picker)
+    
     def on_file_picker_result(e):
         if e.files and not is_uploading:
             for f in e.files:
@@ -270,25 +274,9 @@ def main(page: ft.Page):
             status_text.value = "Ready"
             page.update()
 
-    import asyncio
-    async def add_files(e):
+    def add_files(e):
         if not is_uploading:
-            # We use the existing picker or create one if it doesn't exist
-            picker = None
-            for control in page.overlay:
-                if isinstance(control, ft.FilePicker):
-                    picker = control
-                    break
-            
-            if not picker:
-                picker = ft.FilePicker()
-                picker.on_result = on_file_picker_result
-                page.overlay.append(picker)
-                page.update()
-                # Wait for the mobile client to register the control
-                await asyncio.sleep(0.3)
-            
-            picker.pick_files(allow_multiple=True)
+            file_picker.pick_files(allow_multiple=True)
 
     def start_upload(e):
         nonlocal is_uploading
