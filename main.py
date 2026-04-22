@@ -113,7 +113,8 @@ def main(page: ft.Page):
                     })
             refresh_file_list()
 
-    file_picker = ft.FilePicker(on_result=on_file_picker_result)
+    file_picker = ft.FilePicker()
+    file_picker.on_result = on_file_picker_result
     page.overlay.append(file_picker)
 
     # Header
