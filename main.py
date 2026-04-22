@@ -143,7 +143,7 @@ def main(page: ft.Page):
         border=ft.border.all(2, BORDER),
         padding=10,
         expand=True,
-        animate=ft.Animation(300, "decelerate")
+        animate=ft.animation.Animation(300, "decelerate")
     )
 
     status_text = ft.Text("Ready", size=12, color=TEXT_DIM)
@@ -158,8 +158,9 @@ def main(page: ft.Page):
 
     def copy_url(url):
         page.set_clipboard(url)
-        page.snack_bar = ft.SnackBar(ft.Text(f"Copied: {url}"), bgcolor=ACCENT, duration=2000)
-        page.snack_bar.open = True
+        sb = ft.SnackBar(ft.Text(f"Copied: {url}"), bgcolor=ACCENT, duration=2000)
+        page.overlay.append(sb)
+        sb.open = True
         page.update()
 
     def refresh_file_list():
@@ -209,7 +210,7 @@ def main(page: ft.Page):
                     bgcolor=BG_SECONDARY if i % 2 == 0 else BG_CARD,
                     border_radius=8,
                     padding=10,
-                    animate=ft.Animation(400, "bounceOut"),
+                    animate=ft.animation.Animation(400, "bounceOut"),
                     offset=ft.Offset(0, 0),
                     opacity=1
                 )
