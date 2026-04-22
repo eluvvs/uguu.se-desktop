@@ -424,12 +424,14 @@ def main(page: ft.Page):
     # Buttons
     upload_btn = ft.ElevatedButton(
         "Upload Files", 
-        color=TEXT, 
-        bgcolor=ACCENT_LIGHT, 
         on_click=start_upload,
         width=300,
         height=50,
-        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8))
+        style=ft.ButtonStyle(
+            color=TEXT,
+            bgcolor=ACCENT_LIGHT,
+            shape=ft.RoundedRectangleBorder(radius=8)
+        )
     )
 
     add_btn = ft.Container(
