@@ -132,7 +132,7 @@ def main(page: ft.Page):
             ft.Text("No files selected\nTap 'Add Files' to begin", 
                    text_align=ft.TextAlign.CENTER, color=TEXT_DIM, size=14)
         ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-        alignment=ft.alignment.center,
+        alignment=ft.Alignment(0, 0),
         expand=True,
     )
 
