@@ -210,7 +210,7 @@ def main(page: ft.Page):
                     border_radius=8,
                     padding=10,
                     animate=ft.Animation(400, "bounceOut"),
-                    offset=ft.transform.Offset(0, 0),
+                    offset=ft.Offset(0, 0),
                     opacity=1
                 )
                 rows.append(row_container)
