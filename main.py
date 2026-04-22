@@ -402,5 +402,15 @@ def main(page: ft.Page):
         status_text
     )
 
+def safe_main(page: ft.Page):
+    try:
+        main(page)
+    except Exception as e:
+        import traceback
+        page.clean()
+        page.scroll = ft.ScrollMode.AUTO
+        page.add(ft.Text(f"CRASH: {e}\n{traceback.format_exc()}", color="red", selectable=True))
+        page.update()
+
 if __name__ == "__main__":
-    ft.app(target=main)
+    ft.app(target=safe_main)
