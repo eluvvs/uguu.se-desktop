@@ -115,7 +115,7 @@ def main(page: ft.Page):
 
     file_picker = ft.FilePicker()
     file_picker.on_result = on_file_picker_result
-    # In newer Flet versions, FilePicker is a service and should not be added to the overlay
+    page.overlay.append(file_picker)
 
     # Header
     header = ft.Row([
