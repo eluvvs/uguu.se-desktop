@@ -98,8 +98,7 @@ def main(page: ft.Page):
 
     # UI Components references
     files_column = ft.Column(spacing=10, scroll=ft.ScrollMode.HIDDEN)
-    
-    def on_file_picker_result(e: ft.FilePickerResultEvent):
+    def on_file_picker_result(e):
         if e.files and not is_uploading:
             for f in e.files:
                 # Avoid duplicates
