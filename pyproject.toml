@@ -17,3 +17,6 @@ dependencies = ["file_picker"]
 org = "se.uguu"
 product = "Uguu Mobile"
 permissions = ["READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"]
+
+[tool.setuptools]
+py-modules = ["main"]

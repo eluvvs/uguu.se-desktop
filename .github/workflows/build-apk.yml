@@ -30,7 +30,7 @@ jobs:
           channel: 'stable'
 
       - name: Install dependencies
-        run: pip install .
+        run: pip install "flet[all]>=0.84.0" certifi
 
       - name: Build APK
         run: flet build apk
