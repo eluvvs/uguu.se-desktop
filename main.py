@@ -444,7 +444,7 @@ def main(page: ft.Page):
     
     clear_btn = ft.TextButton(
         "Clear List", 
-        color=TEXT_DIM,
+        style=ft.ButtonStyle(color=TEXT_DIM),
         on_click=clear_files,
     )
 
