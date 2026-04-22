@@ -10,4 +10,6 @@ dependencies = [
 app.module = "main"
 
 [tool.flet.android]
+product = "Uguu.se Android"
+org = "se.uguu"
 permissions = ["READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"]
