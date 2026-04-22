@@ -1,6 +1,5 @@
 import flet as ft
 from flet import FilePicker
-import flet.file_picker # Force builder to see the submodule
 import urllib.request
 import urllib.error
 import json
