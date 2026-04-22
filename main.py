@@ -1,5 +1,6 @@
 import flet as ft
 from flet import FilePicker
+import flet.file_picker # Force builder to see the submodule
 import urllib.request
 import urllib.error
 import json
@@ -100,7 +101,6 @@ def main(page: ft.Page):
     # UI Components references
     files_column = ft.Column(spacing=10, scroll=ft.ScrollMode.HIDDEN)
     
-    # Define the result handler first
     def on_file_picker_result(e):
         if e.files and not is_uploading:
             for f in e.files:
@@ -115,11 +115,6 @@ def main(page: ft.Page):
                         "error": None,
                     })
             refresh_file_list()
-
-    # Instantiate and register FilePicker at startup so the builder sees it
-    file_picker = ft.FilePicker()
-    file_picker.on_result = on_file_picker_result
-    page.overlay.append(file_picker)
 
 
 
@@ -234,9 +229,25 @@ def main(page: ft.Page):
             status_text.value = "Ready"
             page.update()
 
-    def add_files(e):
+    import asyncio
+    async def add_files(e):
         if not is_uploading:
-            file_picker.pick_files(allow_multiple=True)
+            # We use the existing picker or create one if it doesn't exist
+            picker = None
+            for control in page.overlay:
+                if isinstance(control, ft.FilePicker):
+                    picker = control
+                    break
+            
+            if not picker:
+                picker = ft.FilePicker()
+                picker.on_result = on_file_picker_result
+                page.overlay.append(picker)
+                page.update()
+                # Wait for the mobile client to register the control
+                await asyncio.sleep(0.3)
+            
+            picker.pick_files(allow_multiple=True)
 
     def start_upload(e):
         nonlocal is_uploading

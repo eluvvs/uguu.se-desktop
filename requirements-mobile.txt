@@ -1,4 +1,4 @@
 # Mobile-specific requirements
-flet>=0.27.0
+flet[all]>=0.84.0
 certifi
 
