@@ -1,5 +1,5 @@
 [project]
-name = "uguu-mobile"
+name = "litterbox-desktop"
 version = "0.1.0"
 dependencies = [
     "flet>=0.84.0",
@@ -10,6 +10,6 @@ dependencies = [
 app.module = "main"
 
 [tool.flet.android]
-product = "Uguu.se Android"
-org = "se.uguu"
+product = "Litterbox"
+org = "moe.catbox.litterbox"
 permissions = ["READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"]

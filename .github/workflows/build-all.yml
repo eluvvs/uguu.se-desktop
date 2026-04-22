@@ -42,7 +42,7 @@ jobs:
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Uguu.se-Android-APK
+          name: Litterbox-Android-APK
           path: build/apk/**/*.apk
 
   windows:
@@ -58,13 +58,13 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install "flet>=0.84.0" certifi
 
-      - name: Build .exe with PyInstaller
-        run: pyinstaller uguu_desktop.spec
+      - name: Build Windows EXE
+        run: flet build windows
 
       - name: Upload Windows Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Uguu.se-Windows-EXE
-          path: dist/*.exe
+          name: Litterbox-Windows-EXE
+          path: build/windows/**/*.exe

@@ -9,20 +9,20 @@ import threading
 import mimetypes
 
 # ── Constants ──────────────────────────────────────────────────────────────────
-UPLOAD_URL = "https://uguu.se/upload"
-MAX_FILE_SIZE = 128 * 1024 * 1024  # 128 MiB
+UPLOAD_URL = "https://litterbox.catbox.moe/resources/internals/api.php"
+MAX_FILE_SIZE = 1 * 1024 * 1024 * 1024  # 1 GB
 
 # ── Colors ─────────────────────────────────────────────────────────────────────
-BG = "#000000"
-BG_SECONDARY = "#0a0a0a"
-BG_CARD = "#111111"
-ACCENT = "#5eaaff"
-ACCENT_HOVER = "#7ec4ff"
-TEXT = "#e8e8e8"
-TEXT_DIM = "#707070"
+BG = "#110e14"
+BG_SECONDARY = "#1b1624"
+BG_CARD = "#261e38"
+ACCENT = "#5c418f"
+ACCENT_HOVER = "#7556b1"
+TEXT = "#e1dbe8"
+TEXT_DIM = "#8b819e"
 TEXT_SUCCESS = "#6ddb8a"
 TEXT_ERROR = "#ff6b81"
-BORDER = "#1e1e1e"
+BORDER = "#3b2d54"
 
 def format_size(size_bytes):
     for unit in ("B", "KB", "MB"):
@@ -33,8 +33,12 @@ def format_size(size_bytes):
 
 class MultipartFormData:
     def __init__(self):
-        self.boundary = "----UguuAndroid" + os.urandom(16).hex()
+        self.boundary = "----LitterboxAndroid" + os.urandom(16).hex()
         self.parts = []
+        self.fields = []
+
+    def add_field(self, field_name, value):
+        self.fields.append((field_name, value))
 
     def add_file(self, field_name, filepath, filename=None):
         if filename is None:
@@ -46,6 +50,12 @@ class MultipartFormData:
 
     def encode(self):
         lines = []
+        for field_name, value in self.fields:
+            lines.append(f"--{self.boundary}".encode())
+            lines.append(f'Content-Disposition: form-data; name="{field_name}"'.encode())
+            lines.append(b"")
+            lines.append(str(value).encode())
+
         for field_name, filename, mime_type, data in self.parts:
             lines.append(f"--{self.boundary}".encode())
             lines.append(
@@ -88,7 +98,7 @@ class ProgressReader(io.IOBase):
     def readable(self): return True
 
 def main(page: ft.Page):
-    page.title = "Uguu Mobile"
+    page.title = "Litterbox"
     page.bgcolor = BG
     page.theme_mode = ft.ThemeMode.DARK
     page.padding = 20
@@ -96,6 +106,11 @@ def main(page: ft.Page):
     # State
     files_state = []
     is_uploading = False
+    expiration_time = "72h"
+
+    def on_expiration_change(e):
+        nonlocal expiration_time
+        expiration_time = e.control.value
 
     # UI Components references
     files_column = ft.Column(spacing=10, scroll=ft.ScrollMode.HIDDEN)
@@ -119,11 +134,34 @@ def main(page: ft.Page):
 
     # Header
     header = ft.Row([
-        ft.Text("Uguu~", size=32, weight=ft.FontWeight.BOLD, color=ACCENT),
-        ft.Text("Mobile file hosting", size=14, color=TEXT_DIM)
+        ft.Text("Litterbox", size=32, weight=ft.FontWeight.BOLD, color=ACCENT),
+        ft.Text("Temporary file hosting", size=14, color=TEXT_DIM)
     ], alignment=ft.MainAxisAlignment.START, vertical_alignment=ft.CrossAxisAlignment.END)
 
-    info_text = ft.Text("Max 128 MiB per file · Files expire after 3 hours", size=12, color=TEXT_DIM)
+    info_text = ft.Text("Max 1 GB per file", size=12, color=TEXT_DIM)
+
+    expiration_dropdown = ft.Dropdown(
+        value="72h",
+        options=[
+            ft.dropdown.Option("1h", "1 Hour"),
+            ft.dropdown.Option("12h", "12 Hours"),
+            ft.dropdown.Option("24h", "24 Hours"),
+            ft.dropdown.Option("72h", "3 Days"),
+        ],
+        width=120,
+        height=40,
+        content_padding=10,
+        on_change=on_expiration_change,
+        bgcolor=BG_SECONDARY,
+        color=TEXT,
+        border_color=BORDER,
+        text_size=14,
+    )
+    
+    expiration_row = ft.Row([
+        ft.Text("Expire after:", size=14, color=TEXT_DIM),
+        expiration_dropdown
+    ], alignment=ft.MainAxisAlignment.START)
 
     # Empty placeholder
     placeholder = ft.Container(
@@ -285,7 +323,9 @@ def main(page: ft.Page):
 
                 try:
                     form = MultipartFormData()
-                    form.add_file("files[]", f["path"], f["name"])
+                    form.add_field("reqtype", "fileupload")
+                    form.add_field("time", expiration_time)
+                    form.add_file("fileToUpload", f["path"], f["name"])
                     body = form.encode()
 
                     file_idx = pending.index(f)
@@ -305,7 +345,7 @@ def main(page: ft.Page):
                         headers={
                             "Content-Type": form.content_type,
                             "Content-Length": str(len(body)),
-                            "User-Agent": "UguuMobile/1.0",
+                            "User-Agent": "LitterboxDesktop/1.0",
                         },
                         method="POST",
                     )
@@ -412,6 +452,7 @@ def main(page: ft.Page):
     page.add(
         header,
         info_text,
+        expiration_row,
         list_container,
         progress_row,
         buttons_row,

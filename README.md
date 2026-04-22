@@ -1,44 +1,52 @@
-# Uguu Desktop
+# Litterbox Desktop & Mobile
 
-A tiny, lightweight desktop uploader for [uguu.se](https://uguu.se) — select your files, hit upload, get links.
+A modern, fast, and cross-platform uploader for [Litterbox](https://litterbox.catbox.moe) — select your files, choose an expiration time, hit upload, and get links.
 
-![Python](https://img.shields.io/badge/python-3.10+-blue)
+![Python](https://img.shields.io/badge/python-3.11+-blue)
 ![License](https://img.shields.io/badge/license-Unlicense-green)
+![Flet](https://img.shields.io/badge/UI-Flet-purple)
 
 ## Features
 
-- **Select multiple files** and upload them to uguu.se
-- **Click any link** to copy it to clipboard
-- **No dependencies** beyond Python's standard library (tkinter + urllib)
-- **Single .exe** — no installer needed, just download and run
-- Files expire after **3 hours** (uguu.se policy)
-- Max **128 MiB** per file
+- **Select multiple files** and upload them to Litterbox
+- **Expiration Options**: Choose between 1 Hour, 12 Hours, 24 Hours, or 3 Days.
+- **High Limit**: Max **1 GB** per file (Litterbox policy)
+- **Cross Platform**: Works as a Desktop app (.exe) and an Android app (.apk)
+- **Beautiful UI**: Modern purple-themed design built with Flet
 
 ## Download
 
-Grab the latest `UguuDesktop.exe` from the [Releases](../../releases) page.
+Grab the latest `Litterbox-Windows-EXE` or `Litterbox-Android-APK` from the [Releases](../../releases) page.
 
 ## Build from Source
 
+### Requirements
+- Python 3.11+
+- `pip install .`
+
+### Windows EXE
 ```bash
-pip install -r requirements.txt
-pyinstaller uguu_desktop.spec
+flet build windows
 ```
 
-The built exe will be in `dist/UguuDesktop.exe`.
+### Android APK
+```bash
+flet build apk
+```
 
 ## Run without Building
 
 ```bash
-python uguu_desktop.py
+python main.py
 ```
 
 ## How It Works
 
 1. Open the app
-2. Click **Add Files** to pick one or more files
-3. Click **Upload**
-4. Click any returned link to copy it to your clipboard
+2. Choose your preferred **Expiration Time**
+3. Click **Add Files** to pick one or more files
+4. Click **Upload**
+5. Wait for the upload to complete and copy your Litterbox links!
 
 ## License
 
