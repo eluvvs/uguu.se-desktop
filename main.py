@@ -13,16 +13,17 @@ UPLOAD_URL = "https://litterbox.catbox.moe/resources/internals/api.php"
 MAX_FILE_SIZE = 1 * 1024 * 1024 * 1024  # 1 GB
 
 # ── Colors ─────────────────────────────────────────────────────────────────────
-BG = "#110e14"
-BG_SECONDARY = "#1b1624"
-BG_CARD = "#261e38"
-ACCENT = "#5c418f"
-ACCENT_HOVER = "#7556b1"
-TEXT = "#e1dbe8"
-TEXT_DIM = "#8b819e"
+BG = "#000000"
+BG_SECONDARY = "#0a0a0a"
+BG_CARD = "#111111"
+ACCENT = "#3d2b5c"  # Deeper purple for buttons
+ACCENT_HOVER = "#4b3164"
+ACCENT_LIGHT = "#603b87" # For selected state
+TEXT = "#ffffff"
+TEXT_DIM = "#888888"
 TEXT_SUCCESS = "#6ddb8a"
 TEXT_ERROR = "#ff6b81"
-BORDER = "#3b2d54"
+BORDER = "#1a1a1a"
 
 def format_size(size_bytes):
     for unit in ("B", "KB", "MB"):
@@ -108,9 +109,12 @@ def main(page: ft.Page):
     is_uploading = False
     expiration_time = "72h"
 
-    def on_expiration_change(e):
+    def on_expiration_click(e):
         nonlocal expiration_time
-        expiration_time = e.control.value
+        expiration_time = e.control.data
+        for btn in expiration_buttons.controls:
+            btn.bgcolor = ACCENT_LIGHT if btn.data == expiration_time else ACCENT
+        page.update()
 
     # UI Components references
     files_column = ft.Column(spacing=10, scroll=ft.ScrollMode.HIDDEN)
@@ -133,35 +137,35 @@ def main(page: ft.Page):
 
 
     # Header
-    header = ft.Row([
-        ft.Text("Litterbox", size=32, weight=ft.FontWeight.BOLD, color=ACCENT),
-        ft.Text("Temporary file hosting", size=14, color=TEXT_DIM)
-    ], alignment=ft.MainAxisAlignment.START, vertical_alignment=ft.CrossAxisAlignment.END)
+    header = ft.Column([
+        ft.Text("Catbox", size=48, weight=ft.FontWeight.BOLD, color=TEXT, font_family="Cursive"),
+        ft.Text("Temporary uploads up to 1 GB are allowed.", size=16, color=TEXT_DIM)
+    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER)
 
-    info_text = ft.Text("Max 1 GB per file", size=12, color=TEXT_DIM)
+    def create_exp_btn(label, val):
+        return ft.Container(
+            content=ft.Text(label, size=12, color=TEXT, weight=ft.FontWeight.BOLD),
+            data=val,
+            on_click=on_expiration_click,
+            bgcolor=ACCENT_LIGHT if val == "72h" else ACCENT,
+            padding=ft.padding.symmetric(12, 8),
+            border_radius=8,
+            alignment=ft.alignment.center,
+            width=60,
+            animate=200
+        )
 
-    expiration_dropdown = ft.Dropdown(
-        value="72h",
-        options=[
-            ft.dropdown.Option("1h", "1 Hour"),
-            ft.dropdown.Option("12h", "12 Hours"),
-            ft.dropdown.Option("24h", "24 Hours"),
-            ft.dropdown.Option("72h", "3 Days"),
-        ],
-        width=120,
-        height=40,
-        content_padding=10,
-        on_change=on_expiration_change,
-        bgcolor=BG_SECONDARY,
-        color=TEXT,
-        border_color=BORDER,
-        text_size=14,
-    )
+    expiration_buttons = ft.Row([
+        create_exp_btn("1\nHour", "1h"),
+        create_exp_btn("12\nHours", "12h"),
+        create_exp_btn("1\nDay", "24h"),
+        create_exp_btn("3\nDays", "72h"),
+    ], alignment=ft.MainAxisAlignment.CENTER, spacing=10)
     
-    expiration_row = ft.Row([
-        ft.Text("Expire after:", size=14, color=TEXT_DIM),
-        expiration_dropdown
-    ], alignment=ft.MainAxisAlignment.START)
+    expiration_container = ft.Column([
+        ft.Text("Expire after:", size=16, color=TEXT, weight=ft.FontWeight.W_500),
+        expiration_buttons
+    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10)
 
     # Empty placeholder
     placeholder = ft.Container(
@@ -418,46 +422,46 @@ def main(page: ft.Page):
 
 
     # Buttons
-    add_btn = ft.ElevatedButton(
-        "＋ Add Files", 
-        color=TEXT, 
-        bgcolor=BG_SECONDARY, 
-        on_click=add_files,
-        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8))
-    )
-    
-    clear_btn = ft.ElevatedButton(
-        "✕ Clear", 
-        color=TEXT_DIM, 
-        bgcolor=BG_SECONDARY, 
-        on_click=clear_files,
-        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8))
-    )
-    
     upload_btn = ft.ElevatedButton(
-        "Upload", 
-        color=BG, 
-        bgcolor=ACCENT, 
+        "Upload Files", 
+        color=TEXT, 
+        bgcolor=ACCENT_LIGHT, 
         on_click=start_upload,
-        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8), padding=20)
+        width=300,
+        height=50,
+        style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8))
     )
 
-    buttons_row = ft.Row([
-        add_btn,
-        clear_btn,
-        ft.Container(expand=True),
-        upload_btn
-    ])
+    add_btn = ft.Container(
+        content=ft.Text("Select or drop files", size=20, color=TEXT),
+        bgcolor=ACCENT,
+        padding=30,
+        border_radius=12,
+        alignment=ft.alignment.center,
+        on_click=add_files,
+        width=500,
+    )
+    
+    clear_btn = ft.TextButton(
+        "Clear List", 
+        font_color=TEXT_DIM,
+        on_click=clear_files,
+    )
 
-    page.add(
+    ui_layout = ft.Column([
         header,
-        info_text,
-        expiration_row,
+        ft.Divider(height=20, color=ft.Colors.TRANSPARENT),
+        expiration_container,
+        ft.Divider(height=20, color=ft.Colors.TRANSPARENT),
+        add_btn,
+        ft.Divider(height=20, color=ft.Colors.TRANSPARENT),
         list_container,
         progress_row,
-        buttons_row,
+        ft.Row([upload_btn, clear_btn], alignment=ft.MainAxisAlignment.CENTER, spacing=20),
         status_text
-    )
+    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0)
+
+    page.add(ui_layout)
 
 def safe_main(page: ft.Page):
     try:
