@@ -58,7 +58,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        run: pip install "flet>=0.84.0" certifi
+        run: pip install "flet[all]>=0.84.0" certifi
 
       - name: Build Windows EXE
         run: echo y | flet build windows
