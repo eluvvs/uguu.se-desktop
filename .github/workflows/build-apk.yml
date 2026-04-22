@@ -24,13 +24,13 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Accept Android licenses
-        run: yes | sdkmanager --licenses || true
-
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+
+      - name: Accept Android licenses
+        run: yes | flutter doctor --android-licenses || true
 
       - name: Install dependencies
         run: pip install "flet[all]>=0.84.0" certifi
