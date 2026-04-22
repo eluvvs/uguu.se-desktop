@@ -1,4 +1,5 @@
 import flet as ft
+from flet import FilePicker
 import urllib.request
 import urllib.error
 import json
@@ -98,6 +99,8 @@ def main(page: ft.Page):
 
     # UI Components references
     files_column = ft.Column(spacing=10, scroll=ft.ScrollMode.HIDDEN)
+    
+    # Define the result handler first
     def on_file_picker_result(e):
         if e.files and not is_uploading:
             for f in e.files:
@@ -112,6 +115,11 @@ def main(page: ft.Page):
                         "error": None,
                     })
             refresh_file_list()
+
+    # Instantiate and register FilePicker at startup so the builder sees it
+    file_picker = ft.FilePicker()
+    file_picker.on_result = on_file_picker_result
+    page.overlay.append(file_picker)
 
 
 
@@ -226,25 +234,8 @@ def main(page: ft.Page):
             status_text.value = "Ready"
             page.update()
 
-    import asyncio
-    async def add_files(e):
+    def add_files(e):
         if not is_uploading:
-            # Re-use or create the picker dynamically
-            # We look for it in the overlay first to avoid duplicates
-            file_picker = None
-            for control in page.overlay:
-                if isinstance(control, ft.FilePicker):
-                    file_picker = control
-                    break
-            
-            if not file_picker:
-                file_picker = ft.FilePicker()
-                file_picker.on_result = on_file_picker_result
-                page.overlay.append(file_picker)
-                page.update()
-                # Crucial: Give the Android/Flutter engine time to register the control
-                await asyncio.sleep(0.2)
-            
             file_picker.pick_files(allow_multiple=True)
 
     def start_upload(e):
