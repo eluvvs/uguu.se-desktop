@@ -97,7 +97,7 @@ class ProgressReader(io.IOBase):
     def seekable(self): return False
     def readable(self): return True
 
-def main(page: ft.Page):
+def _main(page: ft.Page):
     page.title = "Litterbox"
     page.bgcolor = BG
     page.theme_mode = ft.ThemeMode.DARK
@@ -452,9 +452,9 @@ def main(page: ft.Page):
 
     page.add(ui_layout)
 
-def safe_main(page: ft.Page):
+def main(page: ft.Page):
     try:
-        main(page)
+        _main(page)
     except Exception as e:
         import traceback
         page.clean()
@@ -463,4 +463,4 @@ def safe_main(page: ft.Page):
         page.update()
 
 if __name__ == "__main__":
-    ft.app(target=safe_main, assets_dir="assets")
+    ft.app(target=main, assets_dir="assets")
